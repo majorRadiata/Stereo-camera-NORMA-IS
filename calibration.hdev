@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="13.0.1.1">
+<procedure name="main">
+<interface/>
+<body>
+<c>*Калибровка 3D камеры with sensor Sony IMX264, 2 камеы TheImagingSource</c>
+<c></c>
+<l>NumCameras := 2</l>
+<l>NumCalibObj := 1</l>
+<l>NumImagePairs := 10</l>
+<l>MainFolderPath := 'C:/********/TIS_3DCalibrate/'</l>
+<l>CaltabFile := 'caltab_hex_31x19 AAA.cpd'</l>
+<c></c>
+<c>* создание параметров левой и правой камер</c>
+<l>gen_cam_par_area_scan_division(0.025, 0, 3.45e-006, 3.45e-006, 1224, 1024, 2448, 2048, StartCamParameters)</l>
+<c></c>
+<c>* Создание калибровочного объекта, где указываем число камер, число калибровочных объектов</c>
+<c>* Параметры камер указаны для всех камер</c>
+<l>create_calib_data('calibration_object', NumCameras, NumCalibObj, CalibDataID)</l>
+<l>set_calib_data_cam_param(CalibDataID, 'all', [], StartCamParameters)</l>
+<c></c>
+<c>* открытие интерфейса чтения для 2 камер KarminLeft, KarminRight</c>
+<l>open_framegrabber ('GigEVision', 0, 0, 0, 0, 0, 0, 'default', -1, 'default', -1, 'false', 'default', 'Left_cam', 0, -1, AcqHandleLeft)</l>
+<l>open_framegrabber ('GigEVision', 0, 0, 0, 0, 0, 0, 'default', -1, 'default', -1, 'false', 'default', 'Right_cam', 0, -1, AcqHandleRight)</l>
+<c></c>
+<c>* взять описание калибровочной плиты из файла и включить в структуру калибровки</c>
+<l>set_calib_data_calib_object (CalibDataID, 0, MainFolderPath + CaltabFile)</l>
+<c></c>
+<c></c>
+<c>* открываем окна</c>
+<l>dev_close_window ()</l>
+<l>dev_open_window (10, 10, 800, 600, 'black', WindowLeft)</l>
+<l>dev_open_window (10, 820, 800, 600, 'black', WindowRight)</l>
+<c>* получаем изображения из каждй камеры</c>
+<l>dev_set_window ( WindowLeft )</l>
+<l>grab_image ( ImageLeft, AcqHandleLeft )</l>
+<l>dev_set_window ( WindowRight )</l>
+<l>grab_image ( ImageRight, AcqHandleRight )</l>
+<c></c>
+<c></c>
+<c>* установка шрифта</c>
+<l>query_font ( WindowLeft, wlFont )</l>
+<l>FontWithSize := wlFont[0] + '-20'</l>
+<l>set_font (WindowLeft, FontWithSize)</l>
+<c></c>
+<c></c>
+<l>GoodCounter := 0</l>
+<c></c>
+<l>while ( GoodCounter &lt; NumImagePairs )</l>
+<l>    ImageFindError := false</l>
+<c>    </c>
+<c>    * сервисный цикл для расположения калибровочной дощечки в камерах</c>
+<c>    * если всё ОК, то выход по правой клавише мыши в левом окне</c>
+<l>    repeat</l>
+<l>        dev_set_window ( WindowLeft )</l>
+<l>        grab_image ( ImageLeft, AcqHandleLeft )</l>
+<l>        dev_set_window ( WindowRight )</l>
+<l>        grab_image ( ImageRight, AcqHandleRight )</l>
+<c>        </c>
+<l>        dev_set_window ( WindowLeft )</l>
+<l>        get_mbutton ( WindowLeft, MRow, MCol, MouseButton )</l>
+<c>        * пока не нажмём на правую клавишу мыши</c>
+<l>    until ( MouseButton == 4 )</l>
+<c>    </c>
+<c>    * ищем калибровочный объект в кадре с левой камеры</c>
+<l>    try</l>
+<l>        find_calib_object (ImageLeft, CalibDataID, 0, 0, GoodCounter, ['sigma'], [0.9] )</l>
+<l>    catch (Exception)</l>
+<l>        if (Exception[0] == 8402 )</l>
+<l>            ImageFindError := true</l>
+<l>        elseif (Exception[0] = 8404)</l>
+<l>            ImageFindError := true </l>
+<l>        elseif ( Exception[0]  == 8397 )</l>
+<l>            ImageFindError := true               </l>
+<l>        endif</l>
+<l>    endtry</l>
+<c>    </c>
+<c>    * если в левой камере объект найден, ищем в правом</c>
+<l>    if ( not (ImageFindError) )</l>
+<l>        try</l>
+<l>            find_calib_object (ImageRight, CalibDataID, 1, 0, GoodCounter, ['sigma'], [0.9] )</l>
+<l>        catch (Exception)</l>
+<l>            if (Exception[0] == 8402 )</l>
+<l>                ImageFindError := true</l>
+<l>            elseif (Exception[0] = 8404)</l>
+<l>                ImageFindError := true            </l>
+<l>            elseif ( Exception[0]  == 8397 )</l>
+<l>                ImageFindError := true       </l>
+<l>            endif</l>
+<l>        endtry    </l>
+<l>    endif</l>
+<c>    </c>
+<c>    * если нашли калибровочный объект по 2 камерам, увеличиваем индекс</c>
+<l>    if ( not (ImageFindError))</l>
+<l>        GoodCounter := GoodCounter + 1    </l>
+<l>        dev_disp_text ( 'Successfull pair of Images. Pair '+ GoodCounter + '. Press F5 to continue.', 'window', 20, 20, 'green', [], [])</l>
+<l>        stop()</l>
+<l>    endif</l>
+<c>    </c>
+<l>endwhile</l>
+<c></c>
+<c>* калибровка камер</c>
+<l>calibrate_cameras ( CalibDataID, CalibError )</l>
+<c></c>
+<c></c>
+<c>* получаем данные калибровки</c>
+<l>get_calib_data ( CalibDataID, 'camera', 0, 'params', CamParamLeft)</l>
+<l>get_calib_data ( CalibDataID, 'camera', 1, 'params', CamParamRight)</l>
+<l>get_calib_data ( CalibDataID, 'camera', 1, 'pose', cLPcR)</l>
+<l>stop()</l>
+<c></c>
+<c>* открываем файл для записи рузельтатов калибровки</c>
+<l>dev_open_file_dialog ('csm', 'write', MainFolderPath, strFileName)</l>
+<c></c>
+<c>* получаем данные и пишем</c>
+<l>get_calib_data (CalibDataID, 'model', 'general', 'camera_setup_model', CameraSetupModelID)</l>
+<l>write_camera_setup_model ( CameraSetupModelID, strFileName)</l>
+<l>stop()</l>
+<c></c>
+<c>* овобождаем калибровочные данные</c>
+<l>clear_calib_data (CalibDataID)</l>
+<c></c>
+<l>dev_set_window ( WindowLeft )</l>
+<l>dev_close_window ()</l>
+<l>dev_set_window ( WindowRight )</l>
+<l>dev_close_window ()</l>
+<c></c>
+<l as_id="image_acquisition" as_name="Image Acquisition 01" as_grp="[4,1]" as_ord="1">close_framegrabber (AcqHandleLeft)</l>
+<l>close_framegrabber (AcqHandleRight)</l>
+<c></c>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>

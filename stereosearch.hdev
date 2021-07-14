@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="13.0.2">
+<procedure name="main">
+<interface/>
+<body>
+<l>open_framegrabber ('GigEVision', 0, 0, 0, 0, 0, 0, 'default', -1, 'default', -1, 'false', 'default', 'Left_cam', 0, -1, AcqHandle1)</l>
+<l>open_framegrabber ('GigEVision', 0, 0, 0, 0, 0, 0, 'default', -1, 'default', -1, 'false', 'default', 'Right_cam', 0, -1, AcqHandle2)</l>
+<l>gen_cam_par_area_scan_division (0.025, 0, 0.0000035, 0.0000035, 1224, 1024, 2448, 2048,\
+                                CameraParam)</l>
+<l>*caltab_points('C:******calibration description/cal_tab.descr', X, Y, Z)</l>
+<l>numCam := 2</l>
+<l>numObj := 1</l>
+<l>numPos := 10</l>
+<l>descr := 'C:*****alibration description/cal_tab.descr'</l>
+<l>caltabThick := 0.003</l>
+<l>create_calib_data ('calibration_object', numCam, numObj, CalibDataID)</l>
+<l>set_calib_data_cam_param (CalibDataID, 'all', [], CameraParam)</l>
+<l>set_calib_data_calib_object (CalibDataID, 0, descr)</l>
+<l>*startposes1 :=[]</l>
+<l>*rows1 :=[]</l>
+<l>*cols1 :=[]</l>
+<l>numIgnMsg := 0</l>
+<l>stop()</l>
+<c></c>
+<l>*grab_image_async(ImageRight, AcqHandle2, -1)</l>
+<l>grab_image_start(AcqHandle2, -1)</l>
+<l>Button := 1</l>
+<l>while (Button == 1)</l>
+<l>    grab_image(ImageRIght, AcqHandle2)</l>
+<l>  *  grab_image_async (ImageRight, AcqHandle2, -1)</l>
+<l>    get_mbutton(200000, Row, Column, Button)</l>
+<c>    </c>
+<l>endwhile</l>
+<l>for PositionIndex:= 0 to numPos by 1</l>
+<l>    for CamFind := 1 to numCam by 1</l>
+<l>        grab_image_async(ImageRight, AcqHandle2, -1)</l>
+<l>        dev_set_window(200000)</l>
+<l>        dev_display(ImageRight)</l>
+<l>        Message := ['Position #' + PositionIndex, 'Camera '+ CamFind]</l>
+<l>        disp_message (200000, Message, 'window', 12, 12, 'black', 'true')</l>
+<l>        errMsg := false</l>
+<l>       try</l>
+<l>           find_calib_object (ImageRight, CalibDataID, CamFind, 0, PositionIndex, [], [])</l>
+<l>           get_calib_data_observ_contours (Caltab, CalibDataID, \
+                                           'caltab', CamFind, 0, PositionIndex)</l>
+<l>           get_calib_data_observ_contours (Marks, CalibDataID, 'marks',\
+                                           CamFind, 0, PositionIndex)</l>
+<l>           dev_display (Caltab)</l>
+<l>           dev_display (Marks)</l>
+<l>           *find_caltab (ImageRight, Calplate, descr, 3, 120, 5)</l>
+<l>           *find_marks_and_pose (ImageRight, Calplate, descr, \
+                                CameraParam, 128, 10, 20, 0.7, 5, 100, RCoord, CCoord, startpose1)</l>
+<l>  *  rows1 := [rows1, RCoord]</l>
+<l>  *  cols1 := [cols1, CCoord]</l>
+<l>   * startposes1 := [startposes1, startpose1]</l>
+<l>       catch (Exception)</l>
+<l>           errMsg := true</l>
+<l>           numIgnMsg := numIgnMsg + 1</l>
+<l>           if (Exception[0] == 8402)</l>
+<l>               Message := [Message, 'Не найден калтаб'] </l>
+<l>           elseif (Exception[0] == 8404)</l>
+<l>               Message := [Message, 'не обнаружено меток']</l>
+<l>           else</l>
+<l>               Message := [Message, 'неизвестная ошибка']</l>
+<l>           endif</l>
+<l>           Message := [Message, 'изображение проигнорируется']</l>
+<l>       endtry </l>
+<l>       if (errMsg)</l>
+<l>           disp_message (200000, Message, 'window', 12, 12, 'black', 'true')</l>
+<l>           stop()</l>
+<l>       endif</l>
+<l>    stop()</l>
+<l>    endfor  </l>
+<l>endfor</l>
+<c></c>
+<c></c>
+<c></c>
+<l>*set_calib_data_cam_param (CalibDataID, 'all', [], CameraParamR)</l>
+<l>*set_calib_data_calib_object (CalibDataID, 0, \
+     'C:*****calibration description/cal_tab.descr')</l>
+<l>stop()</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
